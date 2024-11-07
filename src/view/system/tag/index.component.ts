@@ -1,16 +1,16 @@
-// @ts-nocheck
-// Copyright @ 2018-present xiejiahe. All rights reserved. MIT license.
+// 开源项目，未经作者同意，不得以抄袭/复制代码/修改源代码版权信息。
+// Copyright @ 2018-present xiejiahe. All rights reserved.
 // See https://github.com/xjh22222228/nav
 
 import { Component } from '@angular/core'
 import { $t } from 'src/locale'
 import { NzMessageService } from 'ng-zorro-antd/message'
-import { NzNotificationService } from 'ng-zorro-antd/notification'
 import { NzModalService } from 'ng-zorro-antd/modal'
 import { ITagPropValues } from 'src/types'
-import { updateFileContent } from 'src/services'
+import { updateFileContent } from 'src/api'
 import { TAG_PATH } from 'src/constants'
-import { tagMap, tagList } from 'src/store'
+import { tagList } from 'src/store'
+import { isSelfDevelop } from 'src/utils/util'
 
 @Component({
   selector: 'system-tag',
@@ -19,13 +19,13 @@ import { tagMap, tagList } from 'src/store'
 })
 export default class SystemTagComponent {
   $t = $t
+  isSelfDevelop = isSelfDevelop
   tagList: ITagPropValues[] = tagList
   submitting: boolean = false
-  incrementId = tagList.length
+  incrementId = Math.max(...tagList.map((item) => Number(item.id))) + 1
 
   constructor(
     private message: NzMessageService,
-    private notification: NzNotificationService,
     private modal: NzModalService
   ) {}
 
@@ -37,6 +37,10 @@ export default class SystemTagComponent {
   }
 
   handleAdd() {
+    const isEmpty = this.tagList.some((item) => !item.name.trim())
+    if (isEmpty) {
+      return
+    }
     this.incrementId += 1
     this.tagList.unshift({
       id: this.incrementId,
@@ -58,7 +62,7 @@ export default class SystemTagComponent {
     }
 
     // 去重
-    const o = {}
+    const o: Record<string, any> = {}
     this.tagList.forEach((item: ITagPropValues) => {
       if (item.name?.trim?.()) {
         o[item.name] = {
@@ -80,20 +84,21 @@ export default class SystemTagComponent {
       nzOnOk: () => {
         this.submitting = true
         updateFileContent({
-          message: 'Update Tag',
+          message: 'update tag',
           content: JSON.stringify(this.tagList),
           path: TAG_PATH,
         })
           .then(() => {
             this.message.success($t('_saveSuccess'))
           })
-          .catch((res) => {
-            this.notification.error($t('_error'), res.message as string)
-          })
           .finally(() => {
             this.submitting = false
           })
       },
     })
+  }
+
+  trackByItem(i: number, item: any) {
+    return item.id
   }
 }
